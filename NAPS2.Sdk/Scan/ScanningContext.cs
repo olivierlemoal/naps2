@@ -162,9 +162,10 @@ public class ScanningContext : IDisposable
             case ImageFileStorage fileStorage:
                 return fileStorage;
             case ImageMemoryStorage memoryStorage:
-                if (memoryStorage.TypeHint == ".pdf")
+                if (memoryStorage.TypeHint is ".pdf" or ".jpg")
                 {
-                    return WriteDataToBackingFile(memoryStorage.Stream, ".pdf");
+                    // Write the data as-is, as re-encoding a JPEG would only lose quality
+                    return WriteDataToBackingFile(memoryStorage.Stream, memoryStorage.TypeHint);
                 }
                 // TODO: Can we just write this to a file directly? Is there any case where SaveSmallestFormat is really needed?
                 var loadedImage = ImageContext.Load(memoryStorage.Stream);

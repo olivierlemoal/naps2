@@ -1,5 +1,6 @@
 using NAPS2.ImportExport;
 using NAPS2.Pdf;
+using NAPS2.Pdf.Pdfium;
 using NAPS2.Sdk.Tests.Asserts;
 using Xunit;
 
@@ -284,5 +285,37 @@ public class PdfImportExportTests : ContextualTests
         var renderer = new PdfiumPdfRenderer();
         var pdfImage = renderer.RenderPage(ImageContext, _exportPath, PdfRenderSize.Default);
         ImageAsserts.Similar(ImageResources.dog_exif, pdfImage, 0, ignoreResolution: true);
+    }
+
+    [Fact]
+    public async Task ImportJpegPdfExportWithoutEncoding()
+    {
+        SetUpFileStorage();
+
+        var jpegPath = CopyResourceToFile(ImageResources.dog, "image.jpg");
+        var firstExportPath = P("first.pdf");
+        var jpegImages = await new ImageImporter(ScanningContext).Import(jpegPath).ToListAsync();
+        await _exporter.Export(firstExportPath, jpegImages);
+
+        var images = await _importer.Import(firstExportPath).ToListAsync();
+        Assert.Single(images);
+        await _exporter.Export(_exportPath, images);
+
+        var (firstData, firstSize) = GetSingleImageData(firstExportPath);
+        var (data, size) = GetSingleImageData(_exportPath);
+        Assert.Equal(firstData, data);
+        Assert.Equal(firstSize, size);
+    }
+
+    private static (byte[] data, (float width, float height) pageSize) GetSingleImageData(string pdfPath)
+    {
+        lock (PdfiumNativeLibrary.Instance)
+        {
+            using var doc = PdfDocument.Load(pdfPath);
+            using var page = doc.GetPage(0);
+            using var obj = PdfiumImageExtractor.GetSingleImageObject(page, true);
+            Assert.NotNull(obj);
+            return (obj.GetImageDataRaw(), (page.Width, page.Height));
+        }
     }
 }
