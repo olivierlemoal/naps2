@@ -1,4 +1,5 @@
 using NAPS2.Images.Bitwise;
+using NAPS2.ImportExport;
 using NAPS2.Pdf.Pdfium;
 
 namespace NAPS2.Pdf;
@@ -14,6 +15,39 @@ internal static class PdfiumImageExtractor
             return GetImageFromObject(imageContext, page, imageObj, metadata);
         }
         return null;
+    }
+
+    /// <summary>
+    /// Gets the original JPEG data of the page's single image, if it can be exported again as-is (i.e. without
+    /// re-encoding or changing the page size). Otherwise returns null.
+    /// </summary>
+    public static byte[]? GetSingleImageAsJpeg(PdfPage page)
+    {
+        if (page.Rotation != 0)
+        {
+            return null;
+        }
+        using var imageObj = GetSingleImageObject(page, false);
+        if (imageObj == null || imageObj.HasTransparency || !imageObj.HasImageFilters("DCTDecode"))
+        {
+            return null;
+        }
+        var metadata = imageObj.ImageMetadata;
+        if (metadata.Colorspace != Colorspace.DeviceRgb)
+        {
+            return null;
+        }
+        var data = imageObj.GetImageDataRaw();
+        var header = JpegFormatHelper.ReadHeader(new MemoryStream(data));
+        // Same constraints as direct JPEG embedding on export, plus a resolution that keeps the page size
+        if (header is not { NumComponents: 3, IsBaseline: true } ||
+            header.Width != metadata.Width || header.Height != metadata.Height ||
+            Math.Abs(header.HorizontalDpi - metadata.HorizontalDpi) > 1 ||
+            Math.Abs(header.VerticalDpi - metadata.VerticalDpi) > 1)
+        {
+            return null;
+        }
+        return data;
     }
 
     // TODO: This could be wrong if the image object has a mask, but GetRenderedBitmap does a re-encode which we don't really want
