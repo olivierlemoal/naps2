@@ -1011,6 +1011,12 @@ namespace NAPS2.Lang.Resources {
             }
         }
         
+        internal static string ScanOnDeviceButton {
+            get {
+                return ResourceManager.GetString("ScanOnDeviceButton", resourceCulture);
+            }
+        }
+        
         internal static string EnableDebugLogging {
             get {
                 return ResourceManager.GetString("EnableDebugLogging", resourceCulture);

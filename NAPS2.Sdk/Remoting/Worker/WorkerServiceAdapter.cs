@@ -91,6 +91,27 @@ internal class WorkerServiceAdapter
         }
     }
 
+    public async Task WaitForButtonPress(ScanOptions options, CancellationToken cancelToken)
+    {
+        try
+        {
+            var req = new WaitForButtonPressRequest { OptionsXml = options.ToXml() };
+            var resp = await _client.WaitForButtonPressAsync(req, cancellationToken: cancelToken);
+            RemotingHelper.HandleErrors(resp.Error);
+        }
+        catch (RpcException ex)
+        {
+            if (ex.StatusCode == StatusCode.Unavailable)
+            {
+                throw new ScanDriverUnknownException(PlatformCompat.System.WorkerCrashMessage);
+            }
+            if (ex.Status.StatusCode != StatusCode.Cancelled)
+            {
+                throw;
+            }
+        }
+    }
+
     public async Task Scan(ScanningContext scanningContext, ScanOptions options, CancellationToken cancelToken,
         IScanEvents scanEvents, Action<ProcessedImage, string> imageCallback)
     {

@@ -27,6 +27,8 @@ public class EditProfileForm : EtoDialogBase
     private readonly EnumDropDownWidget<ScanScale> _scale = new();
     private readonly CheckBox _enableAutoSave = new() { Text = UiStrings.EnableAutoSave };
     private readonly LinkButton _autoSaveSettings = C.Link(UiStrings.AutoSaveSettings);
+    private readonly CheckBox _scanOnDeviceButton = new() { Text = UiStrings.ScanOnDeviceButton };
+    private readonly LayoutVisibility _scanOnDeviceButtonVis = new(false);
     private readonly Button _advanced = new() { Text = UiStrings.Advanced };
     private readonly SliderWithTextBox _brightnessSlider = new();
     private readonly SliderWithTextBox _contrastSlider = new();
@@ -130,6 +132,9 @@ public class EditProfileForm : EtoDialogBase
                 _enableAutoSave,
                 _autoSaveSettings
             ),
+            L.Row(
+                _scanOnDeviceButton
+            ).Visible(_scanOnDeviceButtonVis),
             C.Filler(),
             L.Row(
                 _advanced,
@@ -318,6 +323,7 @@ public class EditProfileForm : EtoDialogBase
         _horAlign.SelectedItem = ScanProfile.PageAlign;
 
         _enableAutoSave.Checked = ScanProfile.EnableAutoSave;
+        _scanOnDeviceButton.Checked = ScanProfile.ScanOnDeviceButton;
 
         _nativeUi.Checked = ScanProfile.UseNativeUI;
         _predefinedSettings.Checked = !ScanProfile.UseNativeUI;
@@ -385,6 +391,7 @@ public class EditProfileForm : EtoDialogBase
             PaperSource = _paperSource.SelectedItem,
 
             EnableAutoSave = _enableAutoSave.IsChecked(),
+            ScanOnDeviceButton = _scanOnDeviceButton.IsChecked(),
             AutoSaveSettings = ScanProfile.AutoSaveSettings,
             Quality = ScanProfile.Quality,
             BrightnessContrastAfterScan = ScanProfile.BrightnessContrastAfterScan,
@@ -451,6 +458,9 @@ public class EditProfileForm : EtoDialogBase
             _enableAutoSave.Enabled = !locked && !Config.Get(c => c.DisableAutoSave);
             _autoSaveSettings.Enabled = _enableAutoSave.IsChecked();
             _autoSaveSettings.Visible = !locked && !Config.Get(c => c.DisableAutoSave);
+
+            _scanOnDeviceButtonVis.IsVisible = DeviceDriver == Driver.Sane;
+            _scanOnDeviceButton.Enabled = !locked;
 
             _advanced.Enabled = !locked;
 

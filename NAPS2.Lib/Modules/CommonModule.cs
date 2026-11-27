@@ -30,6 +30,7 @@ public class CommonModule : Module
 
         // Scan
         builder.RegisterType<ScanPerformer>().As<IScanPerformer>().SingleInstance();
+        builder.RegisterType<DeviceButtonListener>().AsSelf().SingleInstance();
         builder.RegisterType<LocalPostProcessor>().As<ILocalPostProcessor>();
         builder.RegisterType<RemotePostProcessor>().As<IRemotePostProcessor>();
         builder.RegisterType<ScanBridgeFactory>().As<IScanBridgeFactory>();

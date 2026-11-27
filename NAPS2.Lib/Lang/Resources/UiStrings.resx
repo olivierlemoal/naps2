@@ -614,6 +614,9 @@ Or click and drag to draw a line aligned with the page (vertically or horizontal
   <data name="EnableAutoSave" xml:space="preserve">
     <value>Enable Auto Save</value>
   </data>
+  <data name="ScanOnDeviceButton" xml:space="preserve">
+    <value>Scan when the scanner button is pressed</value>
+  </data>
   <data name="EnableDebugLogging" xml:space="preserve">
     <value>Enable debug logging</value>
   </data>

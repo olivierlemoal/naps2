@@ -38,6 +38,7 @@ public class DesktopController
     private readonly ProcessCoordinator _processCoordinator;
     private readonly RecoveryManager _recoveryManager;
     private readonly EditWithController _editWithController;
+    private readonly DeviceButtonListener _deviceButtonListener;
     private readonly ImageTransfer _imageTransfer = new();
 
     private bool _closed;
@@ -55,7 +56,8 @@ public class DesktopController
         DesktopImagesController desktopImagesController, IDesktopScanController desktopScanController,
         DesktopFormProvider desktopFormProvider, IScannedImagePrinter scannedImagePrinter,
         ISharedDeviceManager sharedDeviceManager, ProcessCoordinator processCoordinator,
-        RecoveryManager recoveryManager, EditWithController editWithController)
+        RecoveryManager recoveryManager, EditWithController editWithController,
+        DeviceButtonListener deviceButtonListener)
     {
         _scanningContext = scanningContext;
         _imageList = imageList;
@@ -78,6 +80,7 @@ public class DesktopController
         _processCoordinator = processCoordinator;
         _recoveryManager = recoveryManager;
         _editWithController = editWithController;
+        _deviceButtonListener = deviceButtonListener;
     }
 
     public bool SkipRecoveryCleanup { get; set; }
@@ -100,6 +103,7 @@ public class DesktopController
         ImportFilesFromCommandLine();
         InitThumbnailRendering();
         _editWithController.LoadAppIcon().AssertNoAwait();
+        StartDeviceButtonListener();
         await RunStillImageEvents();
         SetFirstRunDate();
         ShowDonationOrReviewPrompt();
@@ -188,11 +192,22 @@ public class DesktopController
         }
     }
 
+    private void StartDeviceButtonListener()
+    {
+        _deviceButtonListener.ButtonPressed += (_, profile) =>
+        {
+            _desktopFormProvider.DesktopForm.BringToFront();
+            _desktopScanController.ScanWithProfile(profile).AssertNoAwait();
+        };
+        _deviceButtonListener.Start();
+    }
+
     public void Cleanup()
     {
         if (_suspended) return;
         _processCoordinator.KillServer();
         _sharedDeviceManager.StopSharing();
+        _deviceButtonListener.Stop();
         if (!SkipRecoveryCleanup && !_config.Get(c => c.KeepSession))
         {
             try

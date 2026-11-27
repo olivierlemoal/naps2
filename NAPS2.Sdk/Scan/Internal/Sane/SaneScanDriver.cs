@@ -10,6 +10,9 @@ namespace NAPS2.Scan.Internal.Sane;
 internal class SaneScanDriver : IScanDriver
 {
     private static string? _customConfigDir;
+    private static readonly TimeSpan ButtonPollInterval = TimeSpan.FromMilliseconds(300);
+    private static readonly HashSet<string> ButtonOptionNames =
+        ["scan", "copy", "email", "fax", "file", "pdf", "ocr", "print"];
 
     private readonly ScanningContext _scanningContext;
 
@@ -117,6 +120,54 @@ internal class SaneScanDriver : IScanDriver
             }
         });
     }
+
+    public Task WaitForButtonPress(ScanOptions options, CancellationToken cancelToken)
+    {
+        return Task.Run(() =>
+        {
+            Installation.Initialize();
+            using var client = new SaneClient(Installation, options.SaneOptions.KeepInitialized);
+            while (!cancelToken.IsCancellationRequested)
+            {
+                if (IsButtonPressed(client, options.Device!.ID))
+                {
+                    return;
+                }
+                cancelToken.WaitHandle.WaitOne(ButtonPollInterval);
+            }
+        });
+    }
+
+    private bool IsButtonPressed(SaneClient client, string deviceId)
+    {
+        try
+        {
+            // The device is only held open briefly so that scans from other processes aren't blocked
+            using var device = client.OpenDevice(deviceId);
+            foreach (var option in device.GetOptions().Where(IsButtonOption))
+            {
+                device.GetOption(option, out var value);
+                if (value != 0)
+                {
+                    _scanningContext.Logger.LogDebug("SANE button {Name} pressed", option.Name);
+                    return true;
+                }
+            }
+        }
+        catch (SaneException ex) when (ex.Status == SaneStatus.DeviceBusy)
+        {
+        }
+        return false;
+    }
+
+    private static bool IsButtonOption(SaneOption option) =>
+        option.Name is { } name &&
+        (name.StartsWith("button", StringComparison.Ordinal) || ButtonOptionNames.Contains(name)) &&
+        option.Type is SaneValueType.Bool or SaneValueType.Int &&
+        option.Size == sizeof(int) &&
+        option.Capabilities.HasFlag(SaneCapabilities.SoftDetect) &&
+        !option.IsSettable &&
+        option.IsActive;
 
     internal ScanCaps GetSaneCaps(ISaneDevice device, string backend, string libraryVersion)
     {
