@@ -39,11 +39,13 @@ internal class ScanPerformer : IScanPerformer
     private readonly ScanOptionsValidator _scanOptionsValidator;
     private readonly IScanBridgeFactory _scanBridgeFactory;
     private readonly OcrOperationManager _ocrOperationManager;
+    private readonly DeviceButtonListener _deviceButtonListener;
 
     public ScanPerformer(IDevicePrompt devicePrompt, Naps2Config config, OperationProgress operationProgress,
         AutoSaver autoSaver, IProfileManager profileManager, ErrorOutput errorOutput,
         ScanOptionsValidator scanOptionsValidator, IScanBridgeFactory scanBridgeFactory,
-        ScanningContext scanningContext, OcrOperationManager ocrOperationManager)
+        ScanningContext scanningContext, OcrOperationManager ocrOperationManager,
+        DeviceButtonListener deviceButtonListener)
     {
         _devicePrompt = devicePrompt;
         _config = config;
@@ -55,6 +57,7 @@ internal class ScanPerformer : IScanPerformer
         _scanBridgeFactory = scanBridgeFactory;
         _scanningContext = scanningContext;
         _ocrOperationManager = ocrOperationManager;
+        _deviceButtonListener = deviceButtonListener;
     }
 
     public async Task<DeviceChoice> PromptForDevice(ScanProfile scanProfile, bool allowAlwaysAsk,
@@ -84,6 +87,7 @@ internal class ScanPerformer : IScanPerformer
         var options = BuildOptions(scanProfile, new ScanParams(), IntPtr.Zero, false);
         options.Device = scanProfile.Device?.ToScanDevice(options.Driver);
         var controller = CreateScanController(new ScanParams());
+        using var buttonSuspension = await _deviceButtonListener.Suspend();
         return await controller.GetCaps(options, cancelToken);
     }
 
@@ -100,6 +104,8 @@ internal class ScanPerformer : IScanPerformer
             yield break;
         }
 
+        // The listener polls the device, which would make it busy for the scan
+        using var buttonSuspension = await _deviceButtonListener.Suspend();
         var controller = CreateScanController(scanParams);
         var op = new ScanOperation(options);
 

@@ -7,6 +7,7 @@ using NAPS2.ImportExport.Email.Mapi;
 using NAPS2.Pdf;
 using NAPS2.Scan;
 using NAPS2.Scan.Internal;
+using NAPS2.Scan.Internal.Sane;
 using NAPS2.Scan.Internal.Twain;
 #if !MAC
 using NAPS2.Scan.Internal.Wia;
@@ -139,6 +140,22 @@ internal class WorkerServiceImpl : WorkerService.WorkerServiceBase
         catch (Exception e)
         {
             return new GetCapsResponse { Error = RemotingHelper.ToError(e) };
+        }
+    }
+
+    public override async Task<WaitForButtonPressResponse> WaitForButtonPress(WaitForButtonPressRequest request,
+        ServerCallContext context)
+    {
+        using var callRef = StartCall();
+        try
+        {
+            var scanOptions = request.OptionsXml.FromXml<ScanOptions>();
+            await new SaneScanDriver(_scanningContext).WaitForButtonPress(scanOptions, context.CancellationToken);
+            return new WaitForButtonPressResponse();
+        }
+        catch (Exception e)
+        {
+            return new WaitForButtonPressResponse { Error = RemotingHelper.ToError(e) };
         }
     }
 

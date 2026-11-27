@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using Microsoft.Extensions.Logging;
 using NAPS2.Ocr;
+using NAPS2.Remoting.Worker;
 using NAPS2.Scan.Exceptions;
 using NAPS2.Scan.Internal;
 using NAPS2.Scan.Internal.Sane;
@@ -130,6 +131,28 @@ public class ScanController
         options = _scanOptionsValidator.ValidateAll(options, _scanningContext, true);
         var bridge = _scanBridgeFactory.Create(options);
         return await bridge.GetCaps(options, cancelToken);
+    }
+
+    /// <summary>
+    /// Waits until a physical button is pressed on the scanning device. Only supported by SANE devices that expose
+    /// their buttons as options. Returns without error if cancelled.
+    /// </summary>
+    /// <param name="options">The options to use. Only the device is relevant.</param>
+    /// <param name="cancelToken">A token used to stop waiting.</param>
+    public async Task WaitForButtonPress(ScanOptions options, CancellationToken cancelToken = default)
+    {
+        options = _scanOptionsValidator.ValidateAll(options, _scanningContext, true);
+        if (options.Driver != Driver.Sane)
+        {
+            throw new NotSupportedException("Waiting for a button press is only supported by the SANE driver.");
+        }
+        if (_scanningContext.WorkerFactory == null)
+        {
+            await new SaneScanDriver(_scanningContext).WaitForButtonPress(options, cancelToken);
+            return;
+        }
+        using var ctx = _scanningContext.CreateWorker(WorkerType.Native)!;
+        await ctx.Service.WaitForButtonPress(options, cancelToken);
     }
 
     /// <summary>

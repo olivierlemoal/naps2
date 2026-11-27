@@ -7,6 +7,7 @@ using NAPS2.Recovery;
 using NAPS2.Remoting;
 using NAPS2.Remoting.Server;
 using NAPS2.Remoting.Worker;
+using NAPS2.Scan;
 using NAPS2.Sdk.Tests;
 using NAPS2.Sdk.Tests.Asserts;
 using NAPS2.Update;
@@ -88,7 +89,8 @@ public class DesktopControllerTests : ContextualTests
             _processCoordinator,
             new RecoveryManager(ScanningContext),
             new EditWithController(ScanningContext, _imageList, _config, Substitute.For<IOpenWith>(),
-                Substitute.For<ErrorOutput>(), Substitute.For<IFormFactory>())
+                Substitute.For<ErrorOutput>(), Substitute.For<IFormFactory>()),
+            new DeviceButtonListener(new StubProfileManager(), ScanningContext)
         );
 
         _operationFactory.Create<RecoveryOperation>().Returns(

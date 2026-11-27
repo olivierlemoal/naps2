@@ -118,6 +118,8 @@ public class ScanProfile
 
     public bool ForcePageSizeCrop { get; set; }
 
+    public bool ScanOnDeviceButton { get; set; }
+
     public TwainImpl TwainImpl { get; set; }
 
     public bool TwainProgress { get; set; }
